@@ -23,6 +23,7 @@ func MergeAllFiles(filesDir string) {
 		deque = append(deque, file.Name())
 	}
 	i := 0
+	// TODO - протестировать вариант с большим кол-вом одновременно сжимаемых файлов (bfs)
 	for len(deque) > 1 {
 		toProcess <- worker.TwoFiles{
 			First:  deque[i],

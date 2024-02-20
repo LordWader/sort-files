@@ -46,7 +46,7 @@ func (fr *FileReader) GetNextNum() (int, error) {
 		fr.file.Close()
 		return -1, fmt.Errorf("can't get new numbers from file")
 	}
-	txt := fr.scanner.Text()
+	txt := string(fr.scanner.Bytes())
 	i, err := strconv.Atoi(txt)
 	if err != nil {
 		panic(err)
@@ -65,13 +65,6 @@ func WriteDataToFile(pq *utils.IntHeap, fileName string) {
 		if err != nil {
 			fmt.Printf("Cant write integer to file: %v", err)
 		}
-	}
-}
-
-func WriteNumToFile(file *os.File, num int) {
-	_, err := file.Write([]byte(strconv.Itoa(num) + "\n"))
-	if err != nil {
-		fmt.Printf("Cant write integer to file: %v", err)
 	}
 }
 
@@ -114,7 +107,7 @@ func (fw *FileWriter) WriteToFile() {
 
 func (fw *FileWriter) AppendToBuffer(num int) {
 	fw.buffer = append(fw.buffer, []byte(strconv.Itoa(num)+"\n")...)
-	if len(fw.buffer) > 100 {
+	if len(fw.buffer) > 5000 {
 		fw.WriteToFile()
 	}
 }
