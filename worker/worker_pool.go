@@ -165,6 +165,7 @@ func MergeTwoFiles(toProcess <-chan TwoFiles, resultChan chan<- string) {
 		}
 		// write from buffer to file
 		fileWriter.WriteToFile()
+		fileWriter.file.Close()
 		// clean tmp dir from merged files
 		err = os.Remove(fmt.Sprintf("tmp/%s", first))
 		if err != nil {
