@@ -4,26 +4,29 @@ import (
 	"files_sorter/bfs_walker"
 	"files_sorter/worker"
 	"fmt"
+	"math"
+	_ "net/http/pprof"
 	"os"
 )
 
-const WORKER_POOL int = 200
+var workerPool int
 
 func main() {
+	files, err := os.ReadDir("test_data")
+	if err != nil {
+		panic(err)
+	}
+	workerPool = int(math.Min(float64(len(files)), 200))
 	// debug.SetMemoryLimit(40 / 1000000 * 1 << 20) // 40 MB
-	toProcess := make(chan string, WORKER_POOL)
-	resultChan := make(chan string, WORKER_POOL)
-	err := os.Mkdir("tmp", os.ModePerm)
+	toProcess := make(chan string, workerPool)
+	resultChan := make(chan string, workerPool)
+	err = os.Mkdir("tmp", os.ModePerm)
 	if err != nil {
 		fmt.Errorf("Can't create folder for temporary sorted files: %v", err)
 	}
 	// Setup workers to parse and sort files
-	for i := 0; i < WORKER_POOL; i++ {
+	for i := 0; i < workerPool; i++ {
 		go worker.SortInitialFiles(toProcess, i+1, resultChan)
-	}
-	files, err := os.ReadDir("test_data")
-	if err != nil {
-		panic(err)
 	}
 	go func() {
 		for _, file := range files {

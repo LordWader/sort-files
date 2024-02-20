@@ -92,6 +92,33 @@ func SortInitialFiles(jobs <-chan string, fileId int, result chan<- string) {
 	}
 }
 
+//type FileWriter struct {
+//	buffer []byte
+//	file   *os.File
+//}
+//
+//func NewFileWriter(file *os.File) *FileWriter {
+//	return &FileWriter{
+//		buffer: make([]byte, 0),
+//		file:   file,
+//	}
+//}
+//
+//func (fw *FileWriter) WriteToFile() {
+//	_, err := fw.file.Write(fw.buffer)
+//	if err != nil {
+//		fmt.Printf("Cant write integer to file: %v", err)
+//	}
+//	fw.buffer = make([]byte, 0)
+//}
+//
+//func (fw *FileWriter) AppendToBuffer(num int) {
+//	fw.buffer = append(fw.buffer, []byte(strconv.Itoa(num)+"\n")...)
+//	if len(fw.buffer) > 100 {
+//		fw.WriteToFile()
+//	}
+//}
+
 /*
 ЗДесь нужно мержить и записывать сразу в файл! Убрать очередь и порефачить
 */
