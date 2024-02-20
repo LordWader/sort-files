@@ -19,7 +19,7 @@ func prepareTestData(numOfFiles int) {
 	if err != nil {
 		fmt.Errorf("Can't create folder for test data: %v", err)
 	}
-	min := 0
+	min := -100
 	max := 100
 	for i := 0; i < numOfFiles*10; i++ {
 		if i%10 == 0 {
@@ -43,7 +43,7 @@ func prepareTestData(numOfFiles int) {
 }
 
 func init() {
-	prepareTestData(100)
+	prepareTestData(1000)
 }
 
 func BenchmarkMergeSortedFiles(b *testing.B) {

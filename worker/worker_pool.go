@@ -92,35 +92,35 @@ func SortInitialFiles(jobs <-chan string, fileId int, result chan<- string) {
 	}
 }
 
-//type FileWriter struct {
-//	buffer []byte
-//	file   *os.File
-//}
-//
-//func NewFileWriter(file *os.File) *FileWriter {
-//	return &FileWriter{
-//		buffer: make([]byte, 0),
-//		file:   file,
-//	}
-//}
-//
-//func (fw *FileWriter) WriteToFile() {
-//	_, err := fw.file.Write(fw.buffer)
-//	if err != nil {
-//		fmt.Printf("Cant write integer to file: %v", err)
-//	}
-//	fw.buffer = make([]byte, 0)
-//}
-//
-//func (fw *FileWriter) AppendToBuffer(num int) {
-//	fw.buffer = append(fw.buffer, []byte(strconv.Itoa(num)+"\n")...)
-//	if len(fw.buffer) > 100 {
-//		fw.WriteToFile()
-//	}
-//}
+type FileWriter struct {
+	buffer []byte
+	file   *os.File
+}
+
+func NewFileWriter(file *os.File) *FileWriter {
+	return &FileWriter{
+		buffer: make([]byte, 0),
+		file:   file,
+	}
+}
+
+func (fw *FileWriter) WriteToFile() {
+	_, err := fw.file.Write(fw.buffer)
+	if err != nil {
+		fmt.Printf("Cant write integer to file: %v", err)
+	}
+	fw.buffer = make([]byte, 0)
+}
+
+func (fw *FileWriter) AppendToBuffer(num int) {
+	fw.buffer = append(fw.buffer, []byte(strconv.Itoa(num)+"\n")...)
+	if len(fw.buffer) > 100 {
+		fw.WriteToFile()
+	}
+}
 
 /*
-ЗДесь нужно мержить и записывать сразу в файл! Убрать очередь и порефачить
+Здесь нужно мержить и записывать сразу в файл! Убрать очередь и порефачить
 */
 func MergeTwoFiles(toProcess <-chan TwoFiles, resultChan chan<- string) {
 	for tf := range toProcess {
@@ -131,6 +131,7 @@ func MergeTwoFiles(toProcess <-chan TwoFiles, resultChan chan<- string) {
 		// create tmp file for merged data
 		newFileName := fmt.Sprintf("tmp/tmp_%s", first)
 		file, err := os.Create(newFileName)
+		fileWriter := NewFileWriter(file)
 		defer file.Close()
 		num1, err := fr1.GetNextNum()
 		if err != nil {
@@ -146,7 +147,7 @@ func MergeTwoFiles(toProcess <-chan TwoFiles, resultChan chan<- string) {
 				break
 			}
 			for (num1 <= num2 || stop2) && !stop1 {
-				WriteNumToFile(file, num1)
+				fileWriter.AppendToBuffer(num1)
 				num1, err = fr1.GetNextNum()
 				if err != nil {
 					stop1 = true
@@ -154,7 +155,7 @@ func MergeTwoFiles(toProcess <-chan TwoFiles, resultChan chan<- string) {
 				}
 			}
 			for (num2 <= num1 || stop1) && !stop2 {
-				WriteNumToFile(file, num2)
+				fileWriter.AppendToBuffer(num2)
 				num2, err = fr2.GetNextNum()
 				if err != nil {
 					stop2 = true
@@ -162,6 +163,8 @@ func MergeTwoFiles(toProcess <-chan TwoFiles, resultChan chan<- string) {
 				}
 			}
 		}
+		// write from buffer to file
+		fileWriter.WriteToFile()
 		// clean tmp dir from merged files
 		err = os.Remove(fmt.Sprintf("tmp/%s", first))
 		if err != nil {
