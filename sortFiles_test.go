@@ -10,10 +10,11 @@ import (
 
 /*
 5GB is - 10000 files X 40000
+benchmark - 30 sec for 66000000 lines
 */
 const (
 	WORKER_POOL = 100
-	FILE_SIZE   = 4000000
+	FILE_SIZE   = 40000
 )
 
 func MakeDataFile(processChan <-chan int, resultChan chan<- bool) {
@@ -56,7 +57,7 @@ func prepareTestData(numOfFiles int) {
 }
 
 func init() {
-	prepareTestData(100)
+	prepareTestData(10000)
 }
 
 func BenchmarkMergeSortedFiles(b *testing.B) {

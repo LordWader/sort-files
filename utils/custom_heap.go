@@ -1,12 +1,12 @@
 package utils
 
-type HeapChanNum struct {
-	FrNum int
-	Num   int
+type NumFromFile struct {
+	FileName string
+	Num      int
 }
 
 // A PriorityQueue implements heap.Interface and holds Items.
-type PriorityQueue []*HeapChanNum
+type PriorityQueue []*NumFromFile
 
 func (pq PriorityQueue) Len() int { return len(pq) }
 
@@ -19,7 +19,7 @@ func (pq PriorityQueue) Swap(i, j int) {
 }
 
 func (pq *PriorityQueue) Push(x any) {
-	item := x.(*HeapChanNum)
+	item := x.(*NumFromFile)
 	*pq = append(*pq, item)
 }
 

@@ -39,8 +39,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	workerPool = int(math.Min(float64(len(files)), 20))
-	// debug.SetMemoryLimit(40 / 1000000 * 1 << 20) // 40 MB
+	workerPool = int(math.Min(float64(len(files)), 50))
 	toProcess := make(chan string, workerPool)
 	resultChan := make(chan string, workerPool)
 	defer close(resultChan)
@@ -52,6 +51,8 @@ func main() {
 	for i := 0; i < workerPool; i++ {
 		go worker.SortInitialFiles(toProcess, i+1, resultChan)
 	}
+	fmt.Println("Start sorting files")
+	startTime := time.Now()
 	go func() {
 		for _, file := range files {
 			toProcess <- file.Name()
@@ -61,7 +62,8 @@ func main() {
 	for i := 0; i < len(files); i++ {
 		<-resultChan
 	}
-	fmt.Println("Done sorting, now going to merge files")
+	fmt.Printf("Done sorting, took %s. now going to merge files\n", time.Now().Sub(startTime))
+	startTime = time.Now()
 	bfs_walker.MergeAllFiles("tmp")
-	fmt.Println("Done merging! Take a look at result")
+	fmt.Printf("Done merging, took %s! Take a look at results!\n", time.Now().Sub(startTime))
 }
