@@ -7,19 +7,43 @@ import (
 	"math"
 	_ "net/http/pprof"
 	"os"
+	"runtime"
+	"time"
 )
 
 var workerPool int
 
+func TrackMemoryUsage() {
+	for {
+		select {
+		case <-time.Tick(time.Second * 5):
+			var m runtime.MemStats
+			runtime.ReadMemStats(&m)
+			fmt.Printf("Alloc = %v MiB", m.Alloc/1024/1024)
+			fmt.Printf("\tTotalAlloc = %v MiB", m.TotalAlloc/1024/1024)
+			fmt.Printf("\tSys = %v MiB", m.Sys/1024/1024)
+			fmt.Printf("\tNumGC = %v\n", m.NumGC)
+		}
+	}
+}
+
+/*
+При 20 воркерах, пик alloc - 17 Mib; Sys - 35 MIb
+При 5000 воркеров, пик alloc - 27 Mib; Sys - 64 Mib
+*/
+
 func main() {
+	// start goroutime with memory tracker
+	go TrackMemoryUsage()
 	files, err := os.ReadDir("test_data")
 	if err != nil {
 		panic(err)
 	}
-	workerPool = int(math.Min(float64(len(files)), 200))
+	workerPool = int(math.Min(float64(len(files)), 20))
 	// debug.SetMemoryLimit(40 / 1000000 * 1 << 20) // 40 MB
 	toProcess := make(chan string, workerPool)
 	resultChan := make(chan string, workerPool)
+	defer close(resultChan)
 	err = os.Mkdir("tmp", os.ModePerm)
 	if err != nil {
 		fmt.Errorf("Can't create folder for temporary sorted files: %v", err)

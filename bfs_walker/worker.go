@@ -5,7 +5,7 @@ import (
 	"os"
 )
 
-const WORKER_POOL int = 200
+const WORKER_POOL int = 20
 
 func MergeAllFiles(filesDir string) {
 	toProcess := make(chan worker.TwoFiles, WORKER_POOL)
