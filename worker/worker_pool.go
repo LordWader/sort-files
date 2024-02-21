@@ -1,114 +1,45 @@
 package worker
 
 import (
-	"bufio"
 	"container/heap"
+	"files_sorter/file_processors"
 	"files_sorter/utils"
 	"fmt"
 	"os"
-	"strconv"
+	"strings"
 )
 
 type TwoFiles struct {
 	First, Second string
 }
 
-type FileReader struct {
-	file    *os.File
-	scanner *bufio.Scanner
-}
-
-type NumFromFile struct {
-	fileNum, num int
-}
-
-func NewFileReader(pathToFile string) *FileReader {
-	f, err := os.Open(pathToFile)
-	if err != nil {
-		panic(err)
-	}
-	return &FileReader{
-		file:    f,
-		scanner: bufio.NewScanner(f),
-	}
-}
-
-func (fr *FileReader) CanScan() bool {
-	canScan := fr.scanner.Scan()
-	if !canScan {
-		return false
-	}
-	return true
-}
-
-func (fr *FileReader) GetNextNum() (int, error) {
-	if !fr.CanScan() {
-		fr.file.Close()
-		return -1, fmt.Errorf("can't get new numbers from file")
-	}
-	txt := string(fr.scanner.Bytes())
-	i, err := strconv.Atoi(txt)
-	if err != nil {
-		panic(err)
-	}
-	return i, nil
-}
-
-func WriteDataToFile(pq *utils.IntHeap, fileName string) {
-	file, err := os.Create(fmt.Sprintf("tmp/%s", fileName))
-	defer file.Close()
-	if err != nil {
-		panic(err)
-	}
-	for pq.Len() > 0 {
-		_, err = file.Write([]byte(strconv.Itoa(heap.Pop(pq).(int)) + "\n"))
-		if err != nil {
-			fmt.Printf("Cant write integer to file: %v", err)
-		}
-	}
-}
-
 func SortInitialFiles(jobs <-chan string, fileId int, result chan<- string) {
 	for job := range jobs {
 		pq := &utils.IntHeap{}
 		heap.Init(pq)
-		fr := NewFileReader(fmt.Sprintf("test_data/%d.txt", fileId))
+		chunkNum := 0
+		fileReader := file_processors.NewFileReader(fmt.Sprintf("test_data/%s", job))
+		fileNum := strings.Split(job, ".")[0]
+		fileWriter := file_processors.NewFileWriter(fmt.Sprintf("tmp/tmp_%s_chunk_%d.txt", fileNum, chunkNum))
 		for {
-			num, err := fr.GetNextNum()
+			num, err := fileReader.GetNextNum()
 			if err != nil {
 				break
 			}
 			heap.Push(pq, num)
+			// separate data in chunks
+			// TODO - profile, may be we can make larger chunks
+			if pq.Len() > 10000 {
+				fileWriter.WriteToBuffer(pq)
+				pq := &utils.IntHeap{}
+				heap.Init(pq)
+				chunkNum++
+				fileWriter = file_processors.NewFileWriter(fmt.Sprintf("tmp/tmp_%s_chunk_%d.txt", fileNum, chunkNum))
+				// result <- fmt.Sprintf("%d_chunk_%d", fileId, chunkNum-1)
+			}
 		}
-		WriteDataToFile(pq, fmt.Sprintf("tmp_%s", job))
+		fileWriter.WriteToBuffer(pq)
 		result <- job
-	}
-}
-
-type FileWriter struct {
-	buffer []byte
-	file   *os.File
-}
-
-func NewFileWriter(file *os.File) *FileWriter {
-	return &FileWriter{
-		buffer: make([]byte, 0),
-		file:   file,
-	}
-}
-
-func (fw *FileWriter) WriteToFile() {
-	_, err := fw.file.Write(fw.buffer)
-	if err != nil {
-		fmt.Printf("Cant write integer to file: %v", err)
-	}
-	fw.buffer = make([]byte, 0)
-}
-
-func (fw *FileWriter) AppendToBuffer(num int) {
-	fw.buffer = append(fw.buffer, []byte(strconv.Itoa(num)+"\n")...)
-	if len(fw.buffer) > 20000 {
-		fw.WriteToFile()
 	}
 }
 
@@ -119,13 +50,11 @@ func MergeTwoFiles(toProcess <-chan TwoFiles, resultChan chan<- string) {
 	for tf := range toProcess {
 		first := tf.First
 		second := tf.Second
-		fr1 := NewFileReader(fmt.Sprintf("tmp/%s", first))
-		fr2 := NewFileReader(fmt.Sprintf("tmp/%s", second))
+		fr1 := file_processors.NewFileReader(fmt.Sprintf("tmp/%s", first))
+		fr2 := file_processors.NewFileReader(fmt.Sprintf("tmp/%s", second))
 		// create tmp file for merged data
 		newFileName := fmt.Sprintf("tmp/tmp_%s", first)
-		file, err := os.Create(newFileName)
-		fileWriter := NewFileWriter(file)
-		defer file.Close()
+		fileWriter := file_processors.NewFileWriter(newFileName)
 		num1, err := fr1.GetNextNum()
 		if err != nil {
 			panic(err)
@@ -158,7 +87,7 @@ func MergeTwoFiles(toProcess <-chan TwoFiles, resultChan chan<- string) {
 		}
 		// write from buffer to file
 		fileWriter.WriteToFile()
-		fileWriter.file.Close()
+		fileWriter.File.Close()
 		// clean tmp dir from merged files
 		err = os.Remove(fmt.Sprintf("tmp/%s", first))
 		if err != nil {

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"files_sorter/worker"
+	"files_sorter/file_processors"
 	"fmt"
 	"math/rand"
 	"os"
@@ -17,21 +17,14 @@ func MakeDataFile(processChan <-chan int, resultChan chan<- bool) {
 	min := -1000000000000
 	max := 1000000000000
 	for num := range processChan {
-		file, err := os.Create(fmt.Sprintf("test_data/%d.txt", num+1))
-		if err != nil {
-			panic(err)
-		}
-		fileWriter := worker.NewFileWriter(file)
+		fileWriter := file_processors.NewFileWriter(fmt.Sprintf("test_data/%d.txt", num+1))
 		// 40k lines for 5 Kib file size
 		for i := 0; i < FILE_SIZE; i++ {
 			fileWriter.AppendToBuffer(rand.Intn(max-min+1) + min)
 		}
 		// Write remainder to file
 		fileWriter.WriteToFile()
-		err = file.Close()
-		if err != nil {
-			panic(err)
-		}
+		fileWriter.File.Close()
 		resultChan <- true
 	}
 }

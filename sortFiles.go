@@ -28,8 +28,9 @@ func TrackMemoryUsage() {
 }
 
 /*
-При 20 воркерах, пик alloc - 17 Mib; Sys - 35 MIb
-При 5000 воркеров, пик alloc - 27 Mib; Sys - 64 Mib
+TODO - сортировка очень медленная (медленне слияния файлов в три раза!)
+нужно разбивать файл на чанки и их уже потом сортировать
+TODO - поиграться с кодировками
 */
 
 func main() {
@@ -61,7 +62,7 @@ func main() {
 	for i := 0; i < len(files); i++ {
 		<-resultChan
 	}
-	//fmt.Println("Done sorting, now going to merge files")
+	fmt.Println("Done sorting, now going to merge files")
 	bfs_walker.MergeAllFiles("tmp")
-	//fmt.Println("Done merging! Take a look at result")
+	fmt.Println("Done merging! Take a look at result")
 }
