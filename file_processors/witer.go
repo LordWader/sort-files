@@ -43,7 +43,7 @@ func (fw *FileWriter) WriteToFile() {
 
 func (fw *FileWriter) AppendToBuffer(num int) {
 	fw.buffer = append(fw.buffer, []byte(strconv.Itoa(num)+"\n")...)
-	if len(fw.buffer) > 20000 {
+	if len(fw.buffer) > 1000000 {
 		fw.WriteToFile()
 	}
 }

@@ -28,8 +28,8 @@ func SortInitialFiles(jobs <-chan string, fileId int, result chan<- string) {
 			}
 			heap.Push(pq, num)
 			// separate data in chunks
-			// TODO - profile, may be we can make larger chunks
-			if pq.Len() > 10000 {
+			// TODO - profile, maybe we can make larger chunks
+			if pq.Len() > 700000 {
 				fileWriter.WriteToBuffer(pq)
 				pq := &utils.IntHeap{}
 				heap.Init(pq)

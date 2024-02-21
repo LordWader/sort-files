@@ -8,9 +8,12 @@ import (
 	"testing"
 )
 
+/*
+5GB is - 10000 files X 40000
+*/
 const (
 	WORKER_POOL = 100
-	FILE_SIZE   = 40000
+	FILE_SIZE   = 4000000
 )
 
 func MakeDataFile(processChan <-chan int, resultChan chan<- bool) {
@@ -53,7 +56,7 @@ func prepareTestData(numOfFiles int) {
 }
 
 func init() {
-	prepareTestData(1000)
+	prepareTestData(100)
 }
 
 func BenchmarkMergeSortedFiles(b *testing.B) {
