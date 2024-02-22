@@ -30,10 +30,8 @@ func (s *Sorter) SortInitialFiles(jobs <-chan string, remainderChan chan<- bool)
 		if s.pq.Len() > 0 {
 			fileWriter := file_processors.NewFileWriter(fmt.Sprintf("tmp/%s_chunk_%d.txt", prefix, s.chunkNum))
 			fileWriter.WriteToBuffer(s.pq)
-			remainderChan <- true
-		} else {
-			remainderChan <- true
 		}
+		remainderChan <- true
 	}()
 	for job := range jobs {
 		fileReader := file_processors.NewFileReader(fmt.Sprintf("test_data/%s", job))
