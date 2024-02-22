@@ -7,6 +7,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"runtime"
+	"sync"
 	"time"
 )
 
@@ -27,7 +28,7 @@ func TrackMemoryUsage() {
 }
 
 /*
-TODO - нужно считывать больше данных и сортировать их уже в ram!
+TODO - Кажется, что можно больше считывать файлов и их мержить, с тем чтобы уменьшить их начальное кол-во
 TODO - поиграться с кодировками
 */
 
@@ -38,17 +39,22 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	workerPool = int(math.Min(float64(len(files)), 50))
+	workerPool = int(math.Min(float64(len(files)), 20))
 	toProcess := make(chan string, workerPool)
 	resultChan := make(chan string, workerPool)
+	nums := make(chan int)
 	defer close(resultChan)
 	err = os.Mkdir("tmp", os.ModePerm)
 	if err != nil {
 		fmt.Errorf("Can't create folder for temporary sorted files: %v", err)
 	}
 	// Setup workers to parse and sort files
+	var wg sync.WaitGroup
+	sorter := file_merger.NewSorter(nums)
+	wg.Add(1)
+	go sorter.ProcessNumbers(&wg)
 	for i := 0; i < workerPool; i++ {
-		go file_merger.SortInitialFiles(toProcess, i+1, resultChan)
+		go file_merger.SortInitialFiles(toProcess, sorter, resultChan)
 	}
 	fmt.Println("Start sorting files")
 	startTime := time.Now()
@@ -58,9 +64,13 @@ func main() {
 		}
 		defer close(toProcess)
 	}()
-	for i := 0; i < len(files); i++ {
-		<-resultChan
-	}
+	go func() {
+		for i := 0; i < len(files); i++ {
+			<-resultChan
+		}
+		defer close(nums)
+	}()
+	wg.Wait()
 	fmt.Printf("Done sorting, took %s. now going to merge files\n", time.Now().Sub(startTime))
 	startTime = time.Now()
 	file_merger.MergeAllFiles("tmp")
