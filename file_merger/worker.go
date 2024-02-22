@@ -6,34 +6,61 @@ import (
 	"files_sorter/utils"
 	"fmt"
 	"os"
-	"strings"
+	"sync"
 )
 
-func SortInitialFiles(jobs <-chan string, fileId int, result chan<- string) {
+type Sorter struct {
+	nums     chan int
+	chunkNum int
+	pq       *utils.IntHeap
+}
+
+func NewSorter(toParse chan int) *Sorter {
+	pq := &utils.IntHeap{}
+	heap.Init(pq)
+	return &Sorter{
+		nums:     toParse,
+		chunkNum: 0,
+		pq:       pq,
+	}
+}
+
+func (s *Sorter) WriteRemainderToFile() {
+	if s.pq.Len() > 0 {
+		fileWriter := file_processors.NewFileWriter(fmt.Sprintf("tmp/chunk_%d.txt", s.chunkNum))
+		fileWriter.WriteToBuffer(s.pq)
+	}
+}
+
+func (s *Sorter) ProcessNumbers(wg *sync.WaitGroup) {
+	defer func() {
+		s.WriteRemainderToFile()
+		wg.Done()
+	}()
+	for num := range s.nums {
+		heap.Push(s.pq, num)
+		// separate data in chunks
+		// TODO - profile, maybe we can make larger chunks
+		if s.pq.Len() > 3000000 {
+			fileWriter := file_processors.NewFileWriter(fmt.Sprintf("tmp/chunk_%d.txt", s.chunkNum))
+			fileWriter.WriteToBuffer(s.pq)
+			s.pq = &utils.IntHeap{}
+			heap.Init(s.pq)
+			s.chunkNum++
+		}
+	}
+}
+
+func SortInitialFiles(jobs <-chan string, s *Sorter, result chan<- string) {
 	for job := range jobs {
-		pq := &utils.IntHeap{}
-		heap.Init(pq)
-		chunkNum := 0
 		fileReader := file_processors.NewFileReader(fmt.Sprintf("test_data/%s", job))
-		fileNum := strings.Split(job, ".")[0]
-		fileWriter := file_processors.NewFileWriter(fmt.Sprintf("tmp/tmp_%s_chunk_%d.txt", fileNum, chunkNum))
 		for {
 			num, err := fileReader.GetNextNum()
 			if err != nil {
 				break
 			}
-			heap.Push(pq, num)
-			// separate data in chunks
-			// TODO - profile, maybe we can make larger chunks
-			if pq.Len() > 1000000 {
-				fileWriter.WriteToBuffer(pq)
-				pq := &utils.IntHeap{}
-				heap.Init(pq)
-				chunkNum++
-				fileWriter = file_processors.NewFileWriter(fmt.Sprintf("tmp/tmp_%s_chunk_%d.txt", fileNum, chunkNum))
-			}
+			s.nums <- num
 		}
-		fileWriter.WriteToBuffer(pq)
 		result <- job
 	}
 }
