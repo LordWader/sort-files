@@ -1,4 +1,4 @@
-package worker
+package file_merger
 
 import (
 	"container/heap"

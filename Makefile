@@ -1,2 +1,2 @@
-clean-test-data:
-	cd /tmp && rm -rf tmp && rm -rf test_data
+check-sort-result:
+	gsort cmd/sort/tmp/res.txt -n --check

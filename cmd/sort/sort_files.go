@@ -1,8 +1,7 @@
 package main
 
 import (
-	"files_sorter/bfs_walker"
-	"files_sorter/worker"
+	"files_sorter/file_merger"
 	"fmt"
 	"math"
 	_ "net/http/pprof"
@@ -49,7 +48,7 @@ func main() {
 	}
 	// Setup workers to parse and sort files
 	for i := 0; i < workerPool; i++ {
-		go worker.SortInitialFiles(toProcess, i+1, resultChan)
+		go file_merger.SortInitialFiles(toProcess, i+1, resultChan)
 	}
 	fmt.Println("Start sorting files")
 	startTime := time.Now()
@@ -64,6 +63,6 @@ func main() {
 	}
 	fmt.Printf("Done sorting, took %s. now going to merge files\n", time.Now().Sub(startTime))
 	startTime = time.Now()
-	bfs_walker.MergeAllFiles("tmp")
+	file_merger.MergeAllFiles("tmp")
 	fmt.Printf("Done merging, took %s! Take a look at results!\n", time.Now().Sub(startTime))
 }

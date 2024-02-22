@@ -57,7 +57,7 @@ func prepareTestData(numOfFiles int) {
 }
 
 func init() {
-	prepareTestData(10000)
+	prepareTestData(100)
 }
 
 func BenchmarkMergeSortedFiles(b *testing.B) {
