@@ -14,7 +14,7 @@ benchmark - 30 sec for 66000000 lines
 */
 const (
 	WORKER_POOL = 100
-	FILE_SIZE   = 40000
+	FILE_SIZE   = 100_000_000
 )
 
 func MakeDataFile(processChan <-chan int, resultChan chan<- bool) {
@@ -54,10 +54,12 @@ func prepareTestData(numOfFiles int) {
 	for i := 0; i < numOfFiles; i++ {
 		<-resultChan
 	}
+	defer close(processChan)
+	defer close(resultChan)
 }
 
 func init() {
-	prepareTestData(10000)
+	prepareTestData(1)
 }
 
 func BenchmarkMergeSortedFiles(b *testing.B) {

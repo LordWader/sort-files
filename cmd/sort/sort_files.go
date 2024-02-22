@@ -7,7 +7,6 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"runtime"
-	"sync"
 	"time"
 )
 
@@ -39,22 +38,18 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	workerPool = int(math.Min(float64(len(files)), 20))
+	workerPool = int(math.Min(float64(len(files)), 5))
 	toProcess := make(chan string, workerPool)
-	resultChan := make(chan string, workerPool)
-	nums := make(chan int)
-	defer close(resultChan)
+	remainderChan := make(chan bool, workerPool)
 	err = os.Mkdir("tmp", os.ModePerm)
 	if err != nil {
 		fmt.Errorf("Can't create folder for temporary sorted files: %v", err)
 	}
 	// Setup workers to parse and sort files
-	var wg sync.WaitGroup
-	sorter := file_merger.NewSorter(nums)
-	wg.Add(1)
-	go sorter.ProcessNumbers(&wg)
+	workers := make([]*file_merger.Sorter, workerPool)
 	for i := 0; i < workerPool; i++ {
-		go file_merger.SortInitialFiles(toProcess, sorter, resultChan)
+		workers[i] = file_merger.NewSorter()
+		go workers[i].SortInitialFiles(toProcess, remainderChan)
 	}
 	fmt.Println("Start sorting files")
 	startTime := time.Now()
@@ -64,13 +59,10 @@ func main() {
 		}
 		defer close(toProcess)
 	}()
-	go func() {
-		for i := 0; i < len(files); i++ {
-			<-resultChan
-		}
-		defer close(nums)
-	}()
-	wg.Wait()
+	for i := 0; i < workerPool; i++ {
+		<-remainderChan
+	}
+	close(remainderChan)
 	fmt.Printf("Done sorting, took %s. now going to merge files\n", time.Now().Sub(startTime))
 	startTime = time.Now()
 	file_merger.MergeAllFiles("tmp")

@@ -6,8 +6,8 @@ import (
 	"os"
 )
 
-const WORKER_POOL int = 50
-const K_FILE_MERGE_PARAM int = 300
+const WORKER_POOL int = 20
+const K_FILE_MERGE_PARAM int = 10
 
 func MergeAllFiles(filesDir string) {
 	toProcess := make(chan KFiles, WORKER_POOL)

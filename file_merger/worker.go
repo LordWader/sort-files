@@ -5,53 +5,36 @@ import (
 	"files_sorter/file_processors"
 	"files_sorter/utils"
 	"fmt"
+	"math/rand"
 	"os"
-	"sync"
+	"strconv"
 )
 
 type Sorter struct {
-	nums     chan int
 	chunkNum int
 	pq       *utils.IntHeap
 }
 
-func NewSorter(toParse chan int) *Sorter {
+func NewSorter() *Sorter {
 	pq := &utils.IntHeap{}
 	heap.Init(pq)
 	return &Sorter{
-		nums:     toParse,
 		chunkNum: 0,
 		pq:       pq,
 	}
 }
 
-func (s *Sorter) WriteRemainderToFile() {
-	if s.pq.Len() > 0 {
-		fileWriter := file_processors.NewFileWriter(fmt.Sprintf("tmp/chunk_%d.txt", s.chunkNum))
-		fileWriter.WriteToBuffer(s.pq)
-	}
-}
-
-func (s *Sorter) ProcessNumbers(wg *sync.WaitGroup) {
+func (s *Sorter) SortInitialFiles(jobs <-chan string, remainderChan chan<- bool) {
+	prefix := strconv.Itoa(rand.Int())
 	defer func() {
-		s.WriteRemainderToFile()
-		wg.Done()
-	}()
-	for num := range s.nums {
-		heap.Push(s.pq, num)
-		// separate data in chunks
-		// TODO - profile, maybe we can make larger chunks
-		if s.pq.Len() > 3000000 {
-			fileWriter := file_processors.NewFileWriter(fmt.Sprintf("tmp/chunk_%d.txt", s.chunkNum))
+		if s.pq.Len() > 0 {
+			fileWriter := file_processors.NewFileWriter(fmt.Sprintf("tmp/%s_chunk_%d.txt", prefix, s.chunkNum))
 			fileWriter.WriteToBuffer(s.pq)
-			s.pq = &utils.IntHeap{}
-			heap.Init(s.pq)
-			s.chunkNum++
+			remainderChan <- true
+		} else {
+			remainderChan <- true
 		}
-	}
-}
-
-func SortInitialFiles(jobs <-chan string, s *Sorter, result chan<- string) {
+	}()
 	for job := range jobs {
 		fileReader := file_processors.NewFileReader(fmt.Sprintf("test_data/%s", job))
 		for {
@@ -59,9 +42,15 @@ func SortInitialFiles(jobs <-chan string, s *Sorter, result chan<- string) {
 			if err != nil {
 				break
 			}
-			s.nums <- num
+			heap.Push(s.pq, num)
+			if s.pq.Len() > 3_000_000 {
+				fileWriter := file_processors.NewFileWriter(fmt.Sprintf("tmp/%s_chunk_%d.txt", prefix, s.chunkNum))
+				fileWriter.WriteToBuffer(s.pq)
+				s.pq = &utils.IntHeap{}
+				heap.Init(s.pq)
+				s.chunkNum++
+			}
 		}
-		result <- job
 	}
 }
 
