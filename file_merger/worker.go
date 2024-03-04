@@ -5,36 +5,50 @@ import (
 	"files_sorter/file_processors"
 	"files_sorter/utils"
 	"fmt"
+	"math/rand"
 	"os"
-	"strings"
+	"strconv"
 )
 
-func SortInitialFiles(jobs <-chan string, fileId int, result chan<- string) {
+type Sorter struct {
+	chunkNum int
+	pq       *utils.IntHeap
+}
+
+func NewSorter() *Sorter {
+	pq := &utils.IntHeap{}
+	heap.Init(pq)
+	return &Sorter{
+		chunkNum: 0,
+		pq:       pq,
+	}
+}
+
+func (s *Sorter) SortInitialFiles(jobs <-chan string, remainderChan chan<- bool) {
+	prefix := strconv.Itoa(rand.Int())
+	defer func() {
+		if s.pq.Len() > 0 {
+			fileWriter := file_processors.NewFileWriter(fmt.Sprintf("tmp/%s_chunk_%d.txt", prefix, s.chunkNum))
+			fileWriter.WriteToBuffer(s.pq)
+		}
+		remainderChan <- true
+	}()
 	for job := range jobs {
-		pq := &utils.IntHeap{}
-		heap.Init(pq)
-		chunkNum := 0
 		fileReader := file_processors.NewFileReader(fmt.Sprintf("test_data/%s", job))
-		fileNum := strings.Split(job, ".")[0]
-		fileWriter := file_processors.NewFileWriter(fmt.Sprintf("tmp/tmp_%s_chunk_%d.txt", fileNum, chunkNum))
 		for {
 			num, err := fileReader.GetNextNum()
 			if err != nil {
 				break
 			}
-			heap.Push(pq, num)
-			// separate data in chunks
-			// TODO - profile, maybe we can make larger chunks
-			if pq.Len() > 1000000 {
-				fileWriter.WriteToBuffer(pq)
-				pq := &utils.IntHeap{}
-				heap.Init(pq)
-				chunkNum++
-				fileWriter = file_processors.NewFileWriter(fmt.Sprintf("tmp/tmp_%s_chunk_%d.txt", fileNum, chunkNum))
+			heap.Push(s.pq, num)
+			if s.pq.Len() > 1_000_000 {
+				fileWriter := file_processors.NewFileWriter(fmt.Sprintf("tmp/%s_chunk_%d.txt", prefix, s.chunkNum))
+				fileWriter.WriteToBuffer(s.pq)
+				s.pq = &utils.IntHeap{}
+				heap.Init(s.pq)
+				s.chunkNum++
 			}
 		}
-		fileWriter.WriteToBuffer(pq)
-		result <- job
 	}
 }
 

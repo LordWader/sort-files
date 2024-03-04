@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"runtime"
 )
 
-const WORKER_POOL int = 50
-const K_FILE_MERGE_PARAM int = 20
+// const WORKER_POOL int = 20
+const K_FILE_MERGE_PARAM int = 30
 
-func MergeAllFiles(filesDir string) {
+func MergeAllFiles() {
+	WORKER_POOL := runtime.NumCPU()
 	toProcess := make(chan KFiles, WORKER_POOL)
 	resultChan := make(chan string, WORKER_POOL)
 	// start pool of process

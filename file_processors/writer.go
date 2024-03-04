@@ -1,15 +1,25 @@
 package file_processors
 
 import (
+	"bytes"
 	"container/heap"
 	"files_sorter/utils"
 	"fmt"
 	"os"
 	"strconv"
+	"sync"
 )
 
+var Pool = sync.Pool{
+	New: func() interface{} {
+		b := &bytes.Buffer{}
+		b.Grow(10_000)
+		return b
+	},
+}
+
 type FileWriter struct {
-	buffer []byte
+	Buffer *bytes.Buffer
 	File   *os.File
 }
 
@@ -19,7 +29,7 @@ func NewFileWriter(filePath string) *FileWriter {
 		panic(err)
 	}
 	return &FileWriter{
-		buffer: make([]byte, 0),
+		Buffer: Pool.Get().(*bytes.Buffer),
 		File:   file,
 	}
 }
@@ -27,23 +37,29 @@ func NewFileWriter(filePath string) *FileWriter {
 // WriteToBuffer - used for sorting large files and split them into smaller chunks/*
 func (fw *FileWriter) WriteToBuffer(pq *utils.IntHeap) {
 	for pq.Len() > 0 {
-		fw.buffer = append(fw.buffer, []byte(strconv.Itoa(heap.Pop(pq).(int))+"\n")...)
+		fw.Buffer.WriteString(strconv.Itoa(heap.Pop(pq).(int)))
+		fw.Buffer.WriteRune('\n')
 	}
 	fw.WriteToFile()
-	fw.File.Close()
+	err := fw.File.Close()
+	if err != nil {
+		fmt.Errorf("can't close file: %w", err)
+	}
+	Pool.Put(fw.Buffer)
 }
 
 func (fw *FileWriter) WriteToFile() {
-	_, err := fw.File.Write(fw.buffer)
+	_, err := fw.Buffer.WriteTo(fw.File)
 	if err != nil {
 		fmt.Printf("Cant write integer to File: %v", err)
 	}
-	fw.buffer = make([]byte, 0)
+	fw.Buffer.Reset()
 }
 
 func (fw *FileWriter) AppendToBuffer(num int) {
-	fw.buffer = append(fw.buffer, []byte(strconv.Itoa(num)+"\n")...)
-	if len(fw.buffer) > 1000000 {
+	fw.Buffer.WriteString(strconv.Itoa(num))
+	fw.Buffer.WriteRune('\n')
+	if fw.Buffer.Len() > 1000000 {
 		fw.WriteToFile()
 	}
 }
