@@ -14,16 +14,15 @@ benchmark - 30 sec for 66000000 lines
 */
 const (
 	WORKER_POOL = 100
-	FILE_SIZE   = 100_000_000
 )
 
-func MakeDataFile(processChan <-chan int, resultChan chan<- bool) {
+func MakeDataFile(processChan <-chan int, resultChan chan<- bool, fileSize int) {
 	min := -1000000000000
 	max := 1000000000000
 	for num := range processChan {
 		fileWriter := file_processors.NewFileWriter(fmt.Sprintf("test_data/%d.txt", num+1))
 		// 40k lines for 5 Kib file size
-		for i := 0; i < FILE_SIZE; i++ {
+		for i := 0; i < fileSize; i++ {
 			fileWriter.AppendToBuffer(rand.Intn(max-min+1) + min)
 		}
 		// Write remainder to file
@@ -33,7 +32,7 @@ func MakeDataFile(processChan <-chan int, resultChan chan<- bool) {
 	}
 }
 
-func prepareTestData(numOfFiles int) {
+func prepareTestData(numOfFiles int, fileSize int) {
 	err := os.Mkdir("test_data", os.ModePerm)
 	if err != nil {
 		fmt.Errorf("Can't create folder for test data: %v", err)
@@ -43,7 +42,7 @@ func prepareTestData(numOfFiles int) {
 	resultChan := make(chan bool)
 	// setup workers
 	for i := 0; i < WORKER_POOL; i++ {
-		go MakeDataFile(processChan, resultChan)
+		go MakeDataFile(processChan, resultChan, fileSize)
 	}
 	go func() {
 		for i := 0; i < numOfFiles; i++ {
@@ -59,7 +58,12 @@ func prepareTestData(numOfFiles int) {
 }
 
 func init() {
-	prepareTestData(1)
+	//prepareTestData(10, 10)
+	//prepareTestData(10, 1000)
+	//prepareTestData(1000, 40000)
+	prepareTestData(499_999, 400)
+	//prepareTestData(10_000, 40_000)
+	prepareTestData(1, 200_000_000)
 }
 
 func BenchmarkMergeSortedFiles(b *testing.B) {

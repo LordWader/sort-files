@@ -41,7 +41,7 @@ func (s *Sorter) SortInitialFiles(jobs <-chan string, remainderChan chan<- bool)
 				break
 			}
 			heap.Push(s.pq, num)
-			if s.pq.Len() > 3_000_000 {
+			if s.pq.Len() > 1_000_000 {
 				fileWriter := file_processors.NewFileWriter(fmt.Sprintf("tmp/%s_chunk_%d.txt", prefix, s.chunkNum))
 				fileWriter.WriteToBuffer(s.pq)
 				s.pq = &utils.IntHeap{}

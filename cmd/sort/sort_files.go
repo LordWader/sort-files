@@ -15,7 +15,7 @@ var workerPool int
 func TrackMemoryUsage() {
 	for {
 		select {
-		case <-time.Tick(time.Second * 5):
+		case <-time.Tick(time.Second * 2):
 			var m runtime.MemStats
 			runtime.ReadMemStats(&m)
 			fmt.Printf("Alloc = %v MiB", m.Alloc/1024/1024)
@@ -27,7 +27,7 @@ func TrackMemoryUsage() {
 }
 
 /*
-TODO - Кажется, что можно больше считывать файлов и их мержить, с тем чтобы уменьшить их начальное кол-во
+TODO - Сделать ram-cache при записи в файл
 TODO - поиграться с кодировками
 */
 
@@ -38,7 +38,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	workerPool = int(math.Min(float64(len(files)), 5))
+	workerPool = int(math.Min(float64(len(files)), float64(runtime.NumCPU()-1)))
 	toProcess := make(chan string, workerPool)
 	remainderChan := make(chan bool, workerPool)
 	err = os.Mkdir("tmp", os.ModePerm)
@@ -65,6 +65,6 @@ func main() {
 	close(remainderChan)
 	fmt.Printf("Done sorting, took %s. now going to merge files\n", time.Now().Sub(startTime))
 	startTime = time.Now()
-	file_merger.MergeAllFiles("tmp")
+	file_merger.MergeAllFiles()
 	fmt.Printf("Done merging, took %s! Take a look at results!\n", time.Now().Sub(startTime))
 }

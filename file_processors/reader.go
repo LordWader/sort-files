@@ -5,11 +5,21 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"sync"
+)
+
+var (
+	bytesPool = sync.Pool{New: func() any {
+		buf := make([]byte, 4096)
+		return buf
+	},
+	}
 )
 
 type FileReader struct {
 	file    *os.File
 	scanner *bufio.Scanner
+	buf     []byte
 }
 
 func NewFileReader(pathToFile string) *FileReader {
@@ -17,15 +27,21 @@ func NewFileReader(pathToFile string) *FileReader {
 	if err != nil {
 		panic(err)
 	}
+	buf := bytesPool.Get().([]byte)
+
+	scanner := bufio.NewScanner(f)
+	scanner.Buffer(buf, cap(buf))
 	return &FileReader{
 		file:    f,
 		scanner: bufio.NewScanner(f),
+		buf:     buf,
 	}
 }
 
 func (fr *FileReader) CanScan() bool {
 	canScan := fr.scanner.Scan()
 	if !canScan {
+		bytesPool.Put(fr.buf)
 		return false
 	}
 	return true

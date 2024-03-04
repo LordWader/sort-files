@@ -13,7 +13,7 @@ import (
 var Pool = sync.Pool{
 	New: func() interface{} {
 		b := &bytes.Buffer{}
-		b.Grow(5_000_000)
+		b.Grow(10_000)
 		return b
 	},
 }
@@ -59,7 +59,7 @@ func (fw *FileWriter) WriteToFile() {
 func (fw *FileWriter) AppendToBuffer(num int) {
 	fw.Buffer.WriteString(strconv.Itoa(num))
 	fw.Buffer.WriteRune('\n')
-	if fw.Buffer.Len() > 100000 {
+	if fw.Buffer.Len() > 1000000 {
 		fw.WriteToFile()
 	}
 }
